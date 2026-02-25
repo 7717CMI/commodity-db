@@ -1,65 +1,191 @@
-import Image from "next/image";
+'use client'
+import { useState, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import Header from '@/components/Header'
+import Sidebar from '@/components/Sidebar'
+import FilterBar from '@/components/FilterBar'
+import PriceGrid from '@/components/PriceGrid'
+import TrendChart from '@/components/TrendChart'
+import {
+  COMMODITIES, LOCAL_COUNTRIES, IMPORT_COUNTRIES,
+  getLocalDates,
+} from '@/lib/data'
+import type { Entity, PriceType } from '@/lib/types'
 
-export default function Home() {
+const SIDEBAR_OPEN_W   = 280
+const SIDEBAR_CLOSED_W = 48
+
+export default function Dashboard() {
+  const [sidebarOpen, setSidebarOpen]         = useState(true)
+  const [selectedCommodity, setSelectedCommodity] = useState<string | null>(null)
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
+  const [priceType, setPriceType]             = useState<PriceType>('local')
+  const [entity, setEntity]                   = useState<Entity>('manufacturer')
+  const [selectedDate, setSelectedDate]       = useState(() => {
+    const d = getLocalDates(); return d[d.length - 1]
+  })
+  const [selectedWeek, setSelectedWeek] = useState(1)
+  // null = show weekly average, 0–6 = specific day within the week
+  const [selectedDay, setSelectedDay]   = useState<number | null>(null)
+
+  const handlePriceTypeChange = (t: PriceType) => {
+    setPriceType(t)
+    setSelectedCountry(null)
+    if (t === 'import') { setSelectedWeek(1); setSelectedDay(null) }
+  }
+
+  const handleWeekChange = (w: number) => {
+    setSelectedWeek(w)
+    setSelectedDay(null)   // reset day whenever week switches
+  }
+
+  const activeDates = useMemo(() => getLocalDates(), [])
+
+  const importLabel = selectedDay === null
+    ? `${selectedWeek === 0 ? 'Week 1' : 'Week 2'} avg`
+    : `${selectedWeek === 0 ? 'Week 1' : 'Week 2'} · Day ${selectedDay + 1}`
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="min-h-screen" style={{ background: '#f8fafc' }}>
+      <Header />
+
+      <div className="flex pt-16">
+        <Sidebar
+          open={sidebarOpen}
+          onToggle={setSidebarOpen}
+          selectedCommodity={selectedCommodity}
+          selectedCountry={selectedCountry}
+          priceType={priceType}
+          onSelectCommodity={c => {
+            setSelectedCommodity(c)
+            setSelectedCountry(null)
+          }}
+          onSelectCountry={c => setSelectedCountry(c)}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+        <motion.main
+          animate={{ marginLeft: sidebarOpen ? SIDEBAR_OPEN_W : SIDEBAR_CLOSED_W }}
+          transition={{ duration: 0.25, ease: 'easeInOut' }}
+          className="flex-1 min-h-screen"
+        >
+          <FilterBar
+            entity={entity}
+            priceType={priceType}
+            selectedDate={selectedDate}
+            availableDates={activeDates}
+            selectedWeek={selectedWeek}
+            selectedDay={selectedDay}
+            onEntityChange={setEntity}
+            onPriceTypeChange={handlePriceTypeChange}
+            onDateChange={setSelectedDate}
+            onWeekChange={handleWeekChange}
+            onDayChange={setSelectedDay}
+          />
+
+          <AnimatePresence mode="wait">
+            {!selectedCommodity || !selectedCountry ? (
+              /* Welcome / empty state */
+              <motion.div
+                key="welcome"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] px-6 text-center"
+              >
+                <div className="max-w-lg">
+                  {/* Icon */}
+                  <div className="mx-auto mb-6 w-16 h-16 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center">
+                    <svg
+                      className="w-8 h-8 text-teal-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                    </svg>
+                  </div>
+
+                  <h1 className="text-2xl font-bold text-slate-800 mb-3">
+                    {!selectedCommodity
+                      ? 'Select a Commodity to Get Started'
+                      : 'Now Choose a Country'}
+                  </h1>
+                  <p className="text-slate-500 text-sm leading-relaxed">
+                    {!selectedCommodity
+                      ? 'Use the sidebar on the left to choose a commodity and country. You\'ll instantly see live pricing data, trend charts, and comparisons across all commodities.'
+                      : `You've selected ${selectedCommodity}. Pick a ${priceType === 'local' ? 'country' : 'source country'} from the sidebar to view its pricing data and market trends.`}
+                  </p>
+
+                  {/* Step indicators */}
+                  <div className="mt-8 flex items-center justify-center gap-3">
+                    <div className={`flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full border ${
+                      !selectedCommodity
+                        ? 'bg-teal-500 text-white border-teal-500'
+                        : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                    }`}>
+                      {!selectedCommodity ? '1  Choose commodity' : '1  Commodity selected'}
+                    </div>
+                    <div className="w-4 h-px bg-slate-200" />
+                    <div className={`flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full border ${
+                      selectedCommodity && !selectedCountry
+                        ? 'bg-teal-500 text-white border-teal-500'
+                        : 'bg-slate-50 text-slate-400 border-slate-200'
+                    }`}>
+                      2  Choose country
+                    </div>
+                    <div className="w-4 h-px bg-slate-200" />
+                    <div className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full border bg-slate-50 text-slate-400 border-slate-200">
+                      3  View data
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              /* Dashboard content */
+              <motion.div
+                key={`${selectedCommodity}-${selectedCountry}-${priceType}`}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                className="px-6 py-6 space-y-6"
+              >
+                {/* Breadcrumb */}
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-slate-400">Dashboard</span>
+                  <span className="text-slate-300">›</span>
+                  <span className="text-slate-500 font-medium">{selectedCommodity}</span>
+                  <span className="text-slate-300">›</span>
+                  <span className="font-semibold text-teal-600">{selectedCountry}</span>
+                  <span className="ml-2 text-xs bg-teal-50 text-teal-600 border border-teal-100 px-2 py-0.5 rounded-full">
+                    {priceType === 'local' ? `local · ${entity}` : `import · ${importLabel}`}
+                  </span>
+                </div>
+
+                <PriceGrid
+                  selectedCommodity={selectedCommodity}
+                  country={selectedCountry}
+                  entity={entity}
+                  priceType={priceType}
+                  selectedDate={selectedDate}
+                  selectedWeek={selectedWeek}
+                  selectedDay={selectedDay}
+                />
+
+                <TrendChart
+                  commodity={selectedCommodity}
+                  country={selectedCountry}
+                  entity={entity}
+                  priceType={priceType}
+                  selectedWeek={selectedWeek}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.main>
+      </div>
     </div>
-  );
+  )
 }

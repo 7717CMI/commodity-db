@@ -1,0 +1,164 @@
+'use client'
+import { motion, AnimatePresence } from 'framer-motion'
+import type { Entity, PriceType } from '@/lib/types'
+import { getImportWeeks, getImportWeekDates } from '@/lib/data'
+import { format } from 'date-fns'
+
+interface Props {
+  entity: Entity
+  priceType: PriceType
+  // Local mode
+  selectedDate: string
+  availableDates: string[]
+  onDateChange: (d: string) => void
+  // Import mode
+  selectedWeek: number
+  selectedDay: number | null   // null = weekly average
+  onWeekChange: (w: number) => void
+  onDayChange: (day: number | null) => void
+  onEntityChange: (e: Entity) => void
+  onPriceTypeChange: (t: PriceType) => void
+}
+
+export default function FilterBar({
+  entity, priceType,
+  selectedDate, availableDates, onDateChange,
+  selectedWeek, selectedDay, onWeekChange, onDayChange,
+  onEntityChange, onPriceTypeChange,
+}: Props) {
+  const importWeeks = getImportWeeks()
+  const weekDates = getImportWeekDates(selectedWeek)
+
+  const formatDay = (dateStr: string) => {
+    try { return format(new Date(dateStr), 'MMM d') } catch { return dateStr }
+  }
+
+  return (
+    <div className="flex items-center justify-between flex-wrap gap-4 px-6 py-4 bg-white border-b border-slate-100">
+      {/* Left */}
+      <div className="flex items-center gap-3">
+        {priceType === 'local' && (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+              Selling Price By
+            </label>
+            <select
+              value={entity}
+              onChange={e => onEntityChange(e.target.value as Entity)}
+              className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-700 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400 cursor-pointer min-w-56"
+            >
+              <option value="manufacturer">Selling Price of Manufacturer</option>
+              <option value="distributor">Selling Price of Distributor</option>
+            </select>
+          </div>
+        )}
+        {priceType === 'import' && (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+              Price Type
+            </label>
+            <div className="text-sm text-teal-700 font-medium border border-teal-200 bg-teal-50 rounded-lg px-3 py-2">
+              Import Price — Source Countries
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Right */}
+      <div className="flex items-center gap-4 flex-wrap">
+        {/* Local / Import toggle */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+            Price Source
+          </label>
+          <div className="flex rounded-lg border border-slate-200 overflow-hidden bg-slate-50 p-0.5 gap-0.5">
+            {(['local', 'import'] as PriceType[]).map(t => (
+              <button
+                key={t}
+                onClick={() => onPriceTypeChange(t)}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md capitalize transition-all ${
+                  priceType === t
+                    ? 'bg-teal-500 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Local: date picker */}
+        {priceType === 'local' && (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+              View Date
+            </label>
+            <input
+              type="date"
+              value={selectedDate}
+              min={availableDates[0]}
+              max={availableDates[availableDates.length - 1]}
+              onChange={e => onDateChange(e.target.value)}
+              className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-700 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400 cursor-pointer"
+            />
+          </div>
+        )}
+
+        {/* Import: week toggle */}
+        {priceType === 'import' && (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+              Select Week
+            </label>
+            <div className="flex rounded-lg border border-slate-200 overflow-hidden bg-slate-50 p-0.5 gap-0.5">
+              {importWeeks.map((label, idx) => (
+                <button
+                  key={label}
+                  onClick={() => onWeekChange(idx)}
+                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
+                    selectedWeek === idx
+                      ? 'bg-teal-500 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Import: day dropdown — slides in once a week is active */}
+        <AnimatePresence>
+          {priceType === 'import' && (
+            <motion.div
+              key="day-picker"
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 12 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="flex flex-col gap-1"
+            >
+              <label className="text-xs text-slate-400 font-medium uppercase tracking-wide">
+                View Day
+              </label>
+              <select
+                value={selectedDay === null ? '' : String(selectedDay)}
+                onChange={e => onDayChange(e.target.value === '' ? null : Number(e.target.value))}
+                className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-700 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400 cursor-pointer min-w-40"
+              >
+                <option value="">Weekly Average</option>
+                {weekDates.map((date, i) => (
+                  <option key={i} value={String(i)}>
+                    Day {i + 1} — {formatDay(date)}
+                  </option>
+                ))}
+              </select>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  )
+}
