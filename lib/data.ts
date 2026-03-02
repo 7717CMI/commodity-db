@@ -11,11 +11,16 @@ export const COMMODITIES = [
   'Transformers', 'Pipes',
 ]
 
-export const LOCAL_COUNTRIES = [
-  'UAE', 'KSA', 'Kuwait', 'Oman', 'Qatar', 'Bahrain', 'Rest of GCC',
-]
+export const LOCAL_COUNTRIES = ['UAE']
 
-export const IMPORT_COUNTRIES = ['U.S.', 'India', 'China']
+export const IMPORT_COUNTRIES = [
+  'U.S.', 'India', 'China', 'Germany', 'Brazil', 'Turkey',
+  'Japan', 'South Korea', 'Italy', 'Thailand', 'Vietnam',
+  'Mexico', 'Indonesia', 'Malaysia', 'Poland', 'Spain',
+  'France', 'Canada', 'Australia', 'Taiwan', 'Netherlands',
+  'Egypt', 'South Africa', 'Argentina', 'Philippines', 'Czech Republic',
+  'Sweden', 'Belgium', 'Portugal', 'Romania', 'Pakistan',
+]
 
 // ── Local helpers ──────────────────────────────────────────────────────────────
 

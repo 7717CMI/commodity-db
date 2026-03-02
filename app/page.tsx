@@ -6,10 +6,7 @@ import Sidebar from '@/components/Sidebar'
 import FilterBar from '@/components/FilterBar'
 import PriceGrid from '@/components/PriceGrid'
 import TrendChart from '@/components/TrendChart'
-import {
-  COMMODITIES, LOCAL_COUNTRIES, IMPORT_COUNTRIES,
-  getLocalDates,
-} from '@/lib/data'
+import { getLocalDates } from '@/lib/data'
 import type { Entity, PriceType } from '@/lib/types'
 
 const SIDEBAR_OPEN_W   = 280
@@ -25,18 +22,34 @@ export default function Dashboard() {
     const d = getLocalDates(); return d[d.length - 1]
   })
   const [selectedWeek, setSelectedWeek] = useState(1)
-  // null = show weekly average, 0–6 = specific day within the week
   const [selectedDay, setSelectedDay]   = useState<number | null>(null)
 
   const handlePriceTypeChange = (t: PriceType) => {
     setPriceType(t)
-    setSelectedCountry(null)
-    if (t === 'import') { setSelectedWeek(1); setSelectedDay(null) }
+    if (t === 'local') {
+      // Local = UAE only, auto-select
+      setSelectedCountry('UAE')
+    } else {
+      // Import = user must pick a source country
+      setSelectedCountry(null)
+      setSelectedWeek(1)
+      setSelectedDay(null)
+    }
+  }
+
+  const handleSelectCommodity = (c: string) => {
+    setSelectedCommodity(c)
+    if (priceType === 'local') {
+      // Always UAE for local
+      setSelectedCountry('UAE')
+    } else {
+      // Keep current import country (user may have already picked one)
+    }
   }
 
   const handleWeekChange = (w: number) => {
     setSelectedWeek(w)
-    setSelectedDay(null)   // reset day whenever week switches
+    setSelectedDay(null)
   }
 
   const activeDates = useMemo(() => getLocalDates(), [])
@@ -44,6 +57,9 @@ export default function Dashboard() {
   const importLabel = selectedDay === null
     ? `${selectedWeek === 0 ? 'Week 1' : 'Week 2'} avg`
     : `${selectedWeek === 0 ? 'Week 1' : 'Week 2'} · Day ${selectedDay + 1}`
+
+  // Determine if we have enough selections to show data
+  const isReady = selectedCommodity != null && selectedCountry != null
 
   return (
     <div className="min-h-screen" style={{ background: '#f8fafc' }}>
@@ -56,11 +72,11 @@ export default function Dashboard() {
           selectedCommodity={selectedCommodity}
           selectedCountry={selectedCountry}
           priceType={priceType}
-          onSelectCommodity={c => {
-            setSelectedCommodity(c)
-            setSelectedCountry(null)
-          }}
+          entity={entity}
+          onSelectCommodity={handleSelectCommodity}
           onSelectCountry={c => setSelectedCountry(c)}
+          onPriceTypeChange={handlePriceTypeChange}
+          onEntityChange={setEntity}
         />
 
         <motion.main
@@ -69,21 +85,18 @@ export default function Dashboard() {
           className="flex-1 min-h-screen"
         >
           <FilterBar
-            entity={entity}
             priceType={priceType}
             selectedDate={selectedDate}
             availableDates={activeDates}
             selectedWeek={selectedWeek}
             selectedDay={selectedDay}
-            onEntityChange={setEntity}
-            onPriceTypeChange={handlePriceTypeChange}
             onDateChange={setSelectedDate}
             onWeekChange={handleWeekChange}
             onDayChange={setSelectedDay}
           />
 
           <AnimatePresence mode="wait">
-            {!selectedCommodity || !selectedCountry ? (
+            {!isReady ? (
               /* Welcome / empty state */
               <motion.div
                 key="welcome"
@@ -110,12 +123,12 @@ export default function Dashboard() {
                   <h1 className="text-2xl font-bold text-slate-800 mb-3">
                     {!selectedCommodity
                       ? 'Select a Commodity to Get Started'
-                      : 'Now Choose a Country'}
+                      : 'Now Choose a Source Country'}
                   </h1>
                   <p className="text-slate-500 text-sm leading-relaxed">
                     {!selectedCommodity
-                      ? 'Use the sidebar on the left to choose a commodity and country. You\'ll instantly see live pricing data, trend charts, and comparisons across all commodities.'
-                      : `You've selected ${selectedCommodity}. Pick a ${priceType === 'local' ? 'country' : 'source country'} from the sidebar to view its pricing data and market trends.`}
+                      ? 'Use the sidebar on the left to choose a commodity. You\'ll instantly see live pricing data, trend charts, and comparisons across all commodities.'
+                      : `You've selected ${selectedCommodity}. Pick a source country from the sidebar to view import pricing data and market trends.`}
                   </p>
 
                   {/* Step indicators */}
@@ -127,17 +140,21 @@ export default function Dashboard() {
                     }`}>
                       {!selectedCommodity ? '1  Choose commodity' : '1  Commodity selected'}
                     </div>
-                    <div className="w-4 h-px bg-slate-200" />
-                    <div className={`flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full border ${
-                      selectedCommodity && !selectedCountry
-                        ? 'bg-teal-500 text-white border-teal-500'
-                        : 'bg-slate-50 text-slate-400 border-slate-200'
-                    }`}>
-                      2  Choose country
-                    </div>
+                    {priceType === 'import' && (
+                      <>
+                        <div className="w-4 h-px bg-slate-200" />
+                        <div className={`flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full border ${
+                          selectedCommodity && !selectedCountry
+                            ? 'bg-teal-500 text-white border-teal-500'
+                            : 'bg-slate-50 text-slate-400 border-slate-200'
+                        }`}>
+                          2  Choose source country
+                        </div>
+                      </>
+                    )}
                     <div className="w-4 h-px bg-slate-200" />
                     <div className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full border bg-slate-50 text-slate-400 border-slate-200">
-                      3  View data
+                      {priceType === 'import' ? '3' : '2'}  View data
                     </div>
                   </div>
                 </div>

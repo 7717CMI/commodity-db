@@ -24,7 +24,7 @@ export default function Header() {
           <h1 className="text-lg font-semibold text-slate-800">
             Coherent Commodity Pricing Platform
           </h1>
-          <p className="text-xs text-slate-500">GCC &amp; Global Commodity Price Tracker</p>
+          <p className="text-xs text-slate-500">Commodity Price Tracker for UAE</p>
         </div>
 
         {/* Right spacer */}
