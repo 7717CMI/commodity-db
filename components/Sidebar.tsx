@@ -82,7 +82,7 @@ export default function Sidebar({
               {/* Price Source toggle — at top */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                  Price Source
+                  Data Source
                 </label>
                 <div className="flex rounded-lg border border-slate-200 overflow-hidden bg-slate-50 p-0.5 gap-0.5">
                   {(['local', 'import'] as PriceType[]).map(t => (
