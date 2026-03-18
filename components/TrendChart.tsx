@@ -35,7 +35,10 @@ export default function TrendChart({ commodity, country, entity, priceType, sele
 
   const localDates = getLocalDates()
   const availableMonths = useMemo(() => getAvailableMonths(localDates), [localDates])
-  const [selectedMonth, setSelectedMonth] = useState(() => availableMonths[availableMonths.length - 1] ?? '')
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const currentMonth = new Date().toISOString().split('T')[0].slice(0, 7)
+    return availableMonths.includes(currentMonth) ? currentMonth : availableMonths[availableMonths.length - 1] ?? ''
+  })
 
   // Build the base data points depending on price type
   const allPoints = useMemo(() => {

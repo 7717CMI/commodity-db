@@ -6,7 +6,7 @@ import Sidebar from '@/components/Sidebar'
 import FilterBar from '@/components/FilterBar'
 import PriceGrid from '@/components/PriceGrid'
 import TrendChart from '@/components/TrendChart'
-import { getLocalDates, getImportWeeks } from '@/lib/data'
+import { getLocalDates, getImportWeeks, getImportWeekDates } from '@/lib/data'
 import type { Entity, PriceType } from '@/lib/types'
 
 const SIDEBAR_OPEN_W   = 280
@@ -19,9 +19,25 @@ export default function Dashboard() {
   const [priceType, setPriceType]             = useState<PriceType>('local')
   const [entity, setEntity]                   = useState<Entity>('manufacturer')
   const [selectedDate, setSelectedDate]       = useState(() => {
-    const d = getLocalDates(); return d[d.length - 1]
+    const d = getLocalDates()
+    const today = new Date().toISOString().split('T')[0]
+    // Pick today if it exists in the data, otherwise the closest earlier date
+    if (today >= d[0] && today <= d[d.length - 1]) return today
+    return today < d[0] ? d[0] : d[d.length - 1]
   })
-  const [selectedWeek, setSelectedWeek] = useState(() => getImportWeeks().length - 1)
+  const [selectedWeek, setSelectedWeek] = useState(() => {
+    const today = new Date().toISOString().split('T')[0]
+    const weeks = getImportWeeks()
+    for (let i = 0; i < weeks.length; i++) {
+      const dates = getImportWeekDates(i)
+      if (dates.length && today >= dates[0] && today <= dates[dates.length - 1]) return i
+    }
+    for (let i = weeks.length - 1; i >= 0; i--) {
+      const dates = getImportWeekDates(i)
+      if (dates.length && dates[0] <= today) return i
+    }
+    return weeks.length - 1
+  })
   const [selectedDay, setSelectedDay]   = useState<number | null>(null)
 
   const handlePriceTypeChange = (t: PriceType) => {
@@ -32,7 +48,20 @@ export default function Dashboard() {
     } else {
       // Import = user must pick a source country
       setSelectedCountry(null)
-      setSelectedWeek(getImportWeeks().length - 1)
+      const today = new Date().toISOString().split('T')[0]
+      const weeks = getImportWeeks()
+      let weekIdx = weeks.length - 1
+      for (let i = 0; i < weeks.length; i++) {
+        const dates = getImportWeekDates(i)
+        if (dates.length && today >= dates[0] && today <= dates[dates.length - 1]) { weekIdx = i; break }
+      }
+      if (weekIdx === weeks.length - 1) {
+        for (let i = weeks.length - 1; i >= 0; i--) {
+          const dates = getImportWeekDates(i)
+          if (dates.length && dates[0] <= today) { weekIdx = i; break }
+        }
+      }
+      setSelectedWeek(weekIdx)
       setSelectedDay(null)
     }
   }
